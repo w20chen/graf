@@ -8,29 +8,29 @@
 
 #define MAXN 105
 
-int tarjan_curtime;
-std::deque<int> stk(MAXN);
-std::deque<int> tarjan_dfn(MAXN);
-std::deque<int> tarjan_low(MAXN);
+signed tarjan_curtime;
+std::deque<signed> stk(MAXN);
+std::deque<signed> tarjan_dfn(MAXN);
+std::deque<signed> tarjan_low(MAXN);
 std::deque<bool> visited(MAXN);
 std::deque<bool> isEmbedded(MAXN);
 
-std::deque<std::deque<int>> record(MAXN * 2);
-std::deque<std::deque<int>> face(MAXN * 2);
+std::deque<std::deque<signed>> record(MAXN * 2);
+std::deque<std::deque<signed>> face(MAXN * 2);
 
-int stk_idx = 0;
-int faceNum = 1;
+signed stk_idx = 0;
+signed faceNum = 1;
 
 class Graph {
 public:
-    std::unordered_map<int, int> head;     // head[u] 表示以 u 为起点的第一条边的编号
-    std::deque<int> next;                 // next[idx] 表示编号为 idx 的边的下一条边，这条边和 idx 同一起点
-    std::deque<int> to;                   // to[idx] 表示编号为 idx 的边的终点。
-    std::deque<int> valid;                // valid[i] is the validity of edge with index i, 删边的懒标记
-    std::deque<int> fixed;                // if this graph is an H-fragment, then fixed is the set of all fiexed vertices
+    std::unordered_map<signed, signed> head;     // head[u] 表示以 u 为起点的第一条边的编号
+    std::deque<signed> next;                 // next.at(idx) 表示编号为 idx 的边的下一条边，这条边和 idx 同一起点
+    std::deque<signed> to;                   // to.at(idx) 表示编号为 idx 的边的终点。
+    std::deque<signed> valid;                // valid.at(i) is the validity of edge with index i, 删边的懒标记
+    std::deque<signed> fixed;                // if this graph is an H-fragment, then fixed is the set of all fiexed vertices
 
-    int F;                            // number of faces whose boundary includes all fixed vertices of this H-fragment
-    int FPosition;                    // when F == 1, FPositon is the index of coresponding face
+    signed F;                            // number of faces whose boundary includes all fixed vertices of this H-fragment
+    signed FPosition;                    // when F == 1, FPositon is the index of coresponding face
 
     Graph() {
         head.clear();
@@ -45,7 +45,7 @@ public:
         // 为了方便通过边的编号 i^1 得到反向边，这里预先存入两条边
     }
 
-    void addEdge(int x, int y) {
+    void addEdge(signed x, signed y) {
         // 若 x 不在 head 中，则 head[x] 为默认值 0
         // 为了避免编号为 0 的边的下一条边的编号为 0，这里提前存储 0 号边作为链表尾部的标志
         next.emplace_back(head[x]);    // 编号为 next.size()-1 的下一条边的编号为 head[x]，该边和新加入的边的起点均为 x
@@ -56,18 +56,18 @@ public:
         assert(next.size() == valid.size());
     }
 
-    void addUndirectedEdge(int u, int v) {
+    void addUndirectedEdge(signed u, signed v) {
         addEdge(u, v);
         addEdge(v, u);
     }
 
-    int edgeNum() const {
+    signed edgeNum() const {
         // 这里没有考虑 valid 懒标记
         assert(next.size() % 2 == 0);
         return next.size() / 2 - 1;
     }
 
-    int vertexNum() const {
+    signed vertexNum() const {
         // 这里没有考虑 valid 懒标记
         return head.size();
     }
@@ -82,13 +82,13 @@ public:
         std::cout << "}" << std::endl;
     }
 
-    void removeUndirectedEdge(int u, int v) {
-        for (int l = head[u]; l; l = next[l]) {
-            if (to[l] == v) {
-                assert(valid[l]);
-                valid[l] = 0;
-                assert(valid[l ^ 1]);
-                valid[l ^ 1] = 0;
+    void removeUndirectedEdge(signed u, signed v) {
+        for (signed l = head[u]; l; l = next.at(l)) {
+            if (to.at(l) == v) {
+                assert(valid.at(l));
+                valid.at(l) = 0;
+                assert(valid.at(l ^ 1));
+                valid.at(l ^ 1) = 0;
                 return;
             }
         }
@@ -100,19 +100,19 @@ public:
 void computeF(Graph &B) {
     B.F = 0;
     std::sort(B.fixed.begin(), B.fixed.end());
-    for (int i = 1; i <= faceNum; i++) {
-        if (record[i].size() < B.fixed.size()) {
+    for (signed i = 1; i <= faceNum; i++) {
+        if (record.at(i).size() < B.fixed.size()) {
             continue;
         }
-        int now = 0;
-        for (int j = 0; j < (int)B.fixed.size(); j++) {
-            while (now + 1 < (int)record[i].size() && record[i][now] < B.fixed[j]) {
+        signed now = 0;
+        for (signed j = 0; j < (signed)B.fixed.size(); j++) {
+            while (now + 1 < (signed)record.at(i).size() && record.at(i).at(now) < B.fixed.at(j)) {
                 now++;
             }
-            if (record[i][now] != B.fixed[j]) {
+            if (record.at(i).at(now) != B.fixed.at(j)) {
                 break;
             }
-            else if (j + 1 == (int)B.fixed.size()) {
+            else if (j + 1 == (signed)B.fixed.size()) {
                 B.F++;
                 B.FPosition = i;
             }
@@ -120,184 +120,192 @@ void computeF(Graph &B) {
     }
 }
 
-void embed(int index = 1) {
-    for (int i = 1; i <= stk_idx; i++) {
-        isEmbedded[stk[i]] = true;
+void embed(signed index = 1) {
+    for (signed i = 1; i <= stk_idx; i++) {
+        isEmbedded.at(stk.at(i)) = true;
     }
-    int l = 0;
-    while (face[index][l] != stk[1] && face[index][l] != stk[stk_idx]) {
+    signed l = 0;
+    while (face.at(index).at(l) != stk.at(1) && face.at(index).at(l) != stk.at(stk_idx)) {
         l++;
     }
-    int r = face[index].size() - 1;
-    while (face[index][r] != stk[1] && face[index][r] != stk[stk_idx]) {
+    signed r = face.at(index).size() - 1;
+    while (face.at(index).at(r) != stk.at(1) && face.at(index).at(r) != stk.at(stk_idx)) {
         r--;
     }
-    std::deque<int> vec1;
-    for (int i = 0; i < l; i++) {
-        vec1.emplace_back(face[index][i]);
+    std::deque<signed> vec1;
+    for (signed i = 0; i < l; i++) {
+        vec1.emplace_back(face.at(index).at(i));
     }
-    if (face[index][l] != stk[1]) {
-        for (int i = stk_idx; i >= 1; i--) {
-            vec1.emplace_back(stk[i]);
+    if (face.at(index).at(l) != stk.at(1)) {
+        for (signed i = stk_idx; i >= 1; i--) {
+            vec1.emplace_back(stk.at(i));
         }
     }
     else {
-        for (int i = 1; i <= stk_idx; i++) {
-            vec1.emplace_back(stk[i]);
+        for (signed i = 1; i <= stk_idx; i++) {
+            vec1.emplace_back(stk.at(i));
         }
     }
-    for (int i = r + 1; i < (int)face[index].size(); i++) {
-        vec1.emplace_back(face[index][i]);
+    for (signed i = r + 1; i < (signed)face.at(index).size(); i++) {
+        vec1.emplace_back(face.at(index).at(i));
     }
 
-    std::deque<int> vec2;
-    for (int i = r - 1; i > l; i--) {
-        vec2.emplace_back(face[index][i]);
+    std::deque<signed> vec2;
+    for (signed i = r - 1; i > l; i--) {
+        vec2.emplace_back(face.at(index).at(i));
     }
-    if (face[index][l] != stk[1]) {
-        for (int i = stk_idx; i >= 1; i--) {
-            vec2.emplace_back(stk[i]);
+    if (face.at(index).at(l) != stk.at(1)) {
+        for (signed i = stk_idx; i >= 1; i--) {
+            vec2.emplace_back(stk.at(i));
         }
     }
     else {
-        for (int i = 1; i <= stk_idx; i++) {
-            vec2.emplace_back(stk[i]);
+        for (signed i = 1; i <= stk_idx; i++) {
+            vec2.emplace_back(stk.at(i));
         }
     }
 
-    face[index] = vec1;
-    record[index] = vec1;
-    std::sort(record[index].begin(), record[index].end());
+    face.at(index) = vec1;
+    record.at(index) = vec1;
+    std::sort(record.at(index).begin(), record.at(index).end());
 
     faceNum++;
-    face[faceNum] = vec2;
-    record[faceNum] = vec2;
-    std::sort(record[faceNum].begin(), record[faceNum].end());
+    face.at(faceNum) = vec2;
+    record.at(faceNum) = vec2;
+    std::sort(record.at(faceNum).begin(), record.at(faceNum).end());
 }
 
-bool match(int x, int goal, Graph &G) {
-    visited[x] = true;
-    for (int l = G.head[x]; l; l = G.next[l]) {
-        int y = G.to[l];
-        if (visited[y] == true) {
+bool match(signed x, signed target, Graph &G) {
+    visited.at(x) = true;
+    for (signed l = G.head[x]; l; l = G.next.at(l)) {
+        signed y = G.to.at(l);
+        if (visited.at(y) == true) {
             continue;
         }
-        if (y == goal || (isEmbedded[y] == false && match(y, goal, G))) {
-            G.valid[l] = 0;
-            G.valid[l ^ 1] = 0;
-            if (y == goal) {
+        if (target == y || (isEmbedded.at(y) == false && match(y, target, G))) {
+            G.valid.at(l) = 0;
+            G.valid.at(l ^ 1) = 0;
+            if (target == y) {
                 stk_idx++;
-                stk[stk_idx] = y;
+                stk.at(stk_idx) = y;
             }
             stk_idx++;
-            stk[stk_idx] = x;
+            stk.at(stk_idx) = x;
             return true;
         }
     }
     return false;
 }
 
-void findGraph(Graph &G, int l, Graph &ret) {
-    int v = G.to[l];
-    int fa = G.to[l ^ 1];
+void findGraph(Graph &G, signed l, Graph &ret) {
+    signed v = G.to.at(l);
+    signed fa = G.to.at(l ^ 1);
 
     ret.addUndirectedEdge(v, fa);
 
     // remove the lth edge from original graph
-    G.valid[l] = 0;
-    G.valid[l ^ 1] = 0;
+    G.valid.at(l) = 0;
+    G.valid.at(l ^ 1) = 0;
 
     // for Tarjan_FindBlocks, isEmbedded is always false
-    if (isEmbedded[v] == false) {
-        for (int k = G.head[v]; k; k = G.next[k]) {
-            if (G.valid[k]) {
+    if (isEmbedded.at(v) == false) {
+        for (signed k = G.head[v]; k; k = G.next.at(k)) {
+            if (G.valid.at(k)) {
                 findGraph(G, k, ret);
             }
         }
     }
-    else if (visited[v] == false) {
+    else if (visited.at(v) == false) {
         ret.fixed.emplace_back(v);
-        visited[v] = true;
+        visited.at(v) = true;
     }
 }
 
-bool deal_with_fragments(std::list<Graph> &Lis) {
-    if (Lis.size() == 0) {
+bool deal_with_fragments(std::list<Graph> &fragments_list) {
+    if (fragments_list.size() == 0) {
         return true;
     }
-    std::list<Graph>::iterator it = Lis.begin();
-    int cnt = Lis.size() - 1;
-    while (!Lis.empty()) {
+    std::list<Graph>::iterator it = fragments_list.begin();
+    signed cnt = fragments_list.size() - 1;
+    while (!fragments_list.empty()) {
         Graph &B = *it;
         computeF(B);
         cnt++;
         if (B.F == 0) {
             return false;
         }
-        if (cnt == (int)Lis.size() || B.F == 1) {
+        if (cnt == (signed)fragments_list.size() || B.F == 1) {
             stk_idx = 0;
             std::fill(visited.begin(), visited.end(), 0);
-            match(B.fixed[0], B.fixed[1], B);
+            if (B.fixed.size() == 1) {
+                match(B.fixed.front(), B.fixed.front(), B);
+            }
+            else if (B.fixed.size() >= 2) {
+                match(B.fixed.front(), B.fixed.at(1), B);
+            }
+            else {
+                assert(0);
+            }
             embed(B.FPosition);
             std::fill(visited.begin(), visited.end(), 0);
-            for (int j = 2; j < stk_idx; j++) {
-                for (int l = B.head[stk[j]]; l; l = B.next[l]) {
-                    if (B.valid[l]) {
+            for (signed j = 2; j < stk_idx; j++) {
+                for (signed l = B.head[stk.at(j)]; l; l = B.next.at(l)) {
+                    if (B.valid.at(l)) {
                         Graph g;
                         findGraph(B, l, g);
-                        if (!visited[stk[j]]) {
-                            g.fixed.emplace_back(stk[j]);
+                        if (!visited.at(stk.at(j))) {
+                            g.fixed.emplace_back(stk.at(j));
                         }
-                        for (int k = 0; k < (int)g.fixed.size(); k++) {
-                            visited[g.fixed[k]] = 0;
+                        for (signed k = 0; k < (signed)g.fixed.size(); k++) {
+                            visited.at(g.fixed.at(k)) = 0;
                         }
-                        Lis.emplace_back(g);
+                        fragments_list.emplace_back(g);
                     }
                 }
             }
             cnt = 0;
-            it = Lis.erase(it);
+            it = fragments_list.erase(it);
             it--;
         }
         it++;
-        if (it == Lis.end()) {
-            it = Lis.begin();
+        if (it == fragments_list.end()) {
+            it = fragments_list.begin();
         }
     }
     return true;
 }
 
-void Tarjan_FindBlocks(int x, int fa, std::list<Graph> &Blocks, Graph &Original) {
+void Tarjan_FindBlocks(signed x, signed fa, std::list<Graph> &Blocks, Graph &Original) {
     tarjan_curtime++;
-    tarjan_dfn[x] = tarjan_curtime;
-    tarjan_low[x] = tarjan_curtime;
+    tarjan_dfn.at(x) = tarjan_curtime;
+    tarjan_low.at(x) = tarjan_curtime;
 
-    for (int l = Original.head[x]; l; l = Original.next[l]) {
+    for (signed l = Original.head[x]; l; l = Original.next.at(l)) {
         // for each neighbor y of vertex x
-        int y = Original.to[l];
+        signed y = Original.to.at(l);
         if (y == fa) {
             continue;
         }
-        if (tarjan_dfn[y] != 0) {
-            tarjan_low[x] = std::min(tarjan_low[x], tarjan_dfn[y]);
+        if (tarjan_dfn.at(y) != 0) {
+            tarjan_low.at(x) = std::min(tarjan_low.at(x), tarjan_dfn.at(y));
         }
         else {
             Tarjan_FindBlocks(y, x, Blocks, Original);
-            tarjan_low[x] = std::min(tarjan_low[x], tarjan_low[y]);
+            tarjan_low.at(x) = std::min(tarjan_low.at(x), tarjan_low.at(y));
         }
     }
     // x 无法通过回溯边到达时间戳更小的点
     // 这说明 x 和 fa 之间的边是割边
     // 由于 Tarjan_FindBlocks 函数是递归的，所以我们总是先处理更深的割边
     // 我们从 x 出发，在 DFS 树上向下遍历，能够得到一个块
-    if (tarjan_dfn[x] == tarjan_low[x]) {
+    if (tarjan_dfn.at(x) == tarjan_low.at(x)) {
         // std::cout << x << endl;
         // 删去割边
         Original.removeUndirectedEdge(x, fa);
         Graph thisBlock;
-        for (int l = Original.head[x]; l; l = Original.next[l]) {
-            if (Original.valid[l]) {
-                assert(Original.to[l] != fa);
+        for (signed l = Original.head[x]; l; l = Original.next.at(l)) {
+            if (Original.valid.at(l)) {
+                assert(Original.to.at(l) != fa);
                 findGraph(Original, l, thisBlock);
                 break;
             }
@@ -315,39 +323,39 @@ void findCycle(Graph &Block) {
     std::fill(visited.begin(), visited.end(), 0);
 
     // x is the targeted vertex of the first recorded edge in Block
-    int x = Block.to[2];
-    assert(Block.valid[2]);
+    signed x = Block.to.at(2);
+    assert(Block.valid.at(2));
 
     // for random vertex x in a block, x must be inside at least one cycle
     // 但是我们这里找到的圈并不一定包含 x
     // 比如图 {(1,2),(1,3),(2,3),(3,4),(4,5),(3,5)}
     // 找到的路径可能为 1-3-4-5-3，包含圈 3-4-5-3，应当去掉 1
-    while (visited[x] == false) {
-        visited[x] = true;
-        for (int l = Block.head[x]; l; l = Block.next[l]) {
+    while (visited.at(x) == false) {
+        visited.at(x) = true;
+        for (signed l = Block.head[x]; l; l = Block.next.at(l)) {
             // 延长这个 path
-            if ((l ^ 1) != stk[stk_idx]) {
-                x = Block.to[l];
+            if ((l ^ 1) != stk.at(stk_idx)) {
+                x = Block.to.at(l);
                 stk_idx++;
-                stk[stk_idx] = l;
-                assert(Block.valid[l]);
+                stk.at(stk_idx) = l;
+                assert(Block.valid.at(l));
                 break;
             }
         }
     }
 
-    int k = 1, r = stk_idx;
-    while (Block.to[stk[k] ^ 1] != x) {
+    signed k = 1, r = stk_idx;
+    while (Block.to.at(stk.at(k) ^ 1) != x) {
         k++;
     }
 
     // delete all edges in this cycle from block
     stk_idx = 0;
-    for (int i = k; i <= r; i++) {
-        Block.valid[stk[i]] = 0;
-        Block.valid[stk[i] ^ 1] = 0;
+    for (signed i = k; i <= r; i++) {
+        Block.valid.at(stk.at(i)) = 0;
+        Block.valid.at(stk.at(i) ^ 1) = 0;
         stk_idx++;
-        stk[stk_idx] = Block.to[stk[i] ^ 1];
+        stk.at(stk_idx) = Block.to.at(stk.at(i) ^ 1);
     }
 }
 
@@ -361,12 +369,12 @@ bool trivial_test(const Graph &Block) {
     return true;
 }
 
-int main() {
+signed main() {
     Graph Original = Graph();
-    int N = 0, M = 0;
+    signed N = 0, M = 0;
     std::cin >> N >> M;
-    for (int i = 0; i < M; i++) {
-        int x = 0, y = 0;
+    for (signed i = 0; i < M; i++) {
+        signed x = 0, y = 0;
         std::cin >> x >> y;
         if (x == y) {
             continue;
@@ -390,8 +398,8 @@ int main() {
     std::fill(tarjan_dfn.begin(), tarjan_dfn.end(), 0);
 
     std::list<Graph> Blocks;
-    for (int i = 1; i <= N; i++) {
-        if (tarjan_dfn[i] == 0) {
+    for (signed i = 1; i <= N; i++) {
+        if (tarjan_dfn.at(i) == 0) {
             Tarjan_FindBlocks(i, i, Blocks, Original);
         }
     }
@@ -406,24 +414,24 @@ int main() {
         }
         stk_idx = 0;
         findCycle(Block);
-        face[1].emplace_back(stk[1]);
-        face[1].emplace_back(stk[stk_idx]);
+        face.at(1).emplace_back(stk.at(1));
+        face.at(1).emplace_back(stk.at(stk_idx));
 
         embed();
 
         std::fill(visited.begin(), visited.end(), 0);
 
         std::list<Graph> fragments;
-        for (int j = 1; j <= stk_idx; j++) {
-            for (int l = Block.head[stk[j]]; l; l = Block.next[l]) {
-                if (Block.valid[l]) {
+        for (signed j = 1; j <= stk_idx; j++) {
+            for (signed l = Block.head[stk.at(j)]; l; l = Block.next.at(l)) {
+                if (Block.valid.at(l)) {
                     Graph frag;
                     findGraph(Block, l, frag);
-                    if (visited[stk[j]] == false) {
-                        frag.fixed.emplace_back(stk[j]);
+                    if (visited.at(stk.at(j)) == false) {
+                        frag.fixed.emplace_back(stk.at(j));
                     }
-                    for (int k = 0; k < (int)frag.fixed.size(); k++) {
-                        visited[frag.fixed[k]] = false;
+                    for (signed k = 0; k < (signed)frag.fixed.size(); k++) {
+                        visited.at(frag.fixed.at(k)) = false;
                     }
                     fragments.emplace_back(frag);
                 }
@@ -435,9 +443,9 @@ int main() {
             return 0;
         }
 
-        for (int j = 1; j <= faceNum; j++) {
-            face[j].resize(0);
-            record[j].resize(0);
+        for (signed j = 1; j <= faceNum; j++) {
+            face.at(j).resize(0);
+            record.at(j).resize(0);
         }
         faceNum = 1;
     }
@@ -459,4 +467,38 @@ int main() {
 2 8
 8 9
 2 9
+*/
+
+/*
+9 12
+1 2
+1 3
+2 3
+2 9
+2 8
+3 4
+4 5
+5 6
+5 7
+7 8
+7 9
+6 8
+*/
+
+/*
+14 14
+1 2
+2 3
+3 4
+4 5
+5 6
+6 7
+7 2
+2 8
+8 9
+2 9
+1 10
+1 11
+10 11
+11 12
 */
